@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+yum install -y yum-plugin-tmprepo
+yum install -y spacewalk-client-repo --tmprepo=https://copr-be.cloud.fedoraproject.org/results/%40spacewalkproject/spacewalk-2.10-client/epel-7-x86_64/repodata/repomd.xml --nogpg
+rpm -Uvh http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+yum install -y rhn-client-tools rhn-check rhn-setup rhnsd m2crypto yum-rhn-plugin osad rhncfg-actions rhncfg-management bind-utils telnet setroubleshoot setools
+#
+rpm -Uvh http://10.91.69.139/pub/rhn-org-trusted-ssl-cert-1.0-1.noarch.rpm
+
+rhnreg_ks --force --activationkey=1-spacewalk-centos7-key --serverUrl=http://ip-10-91-69-139.ec2.internal/XMLRPC --sslCACert=/usr/share/rhn/RHN-ORG-TRUSTED-SSL-CERT --profilename=$HOSTNAME
+rhnreg_ks --force --activationkey=1-spacewalk-rhel7-key --serverUrl=http://ip-10-91-69-139.ec2.internal/XMLRPC --sslCACert=/usr/share/rhn/RHN-ORG-TRUSTED-SSL-CERT --profilename=$HOSTNAME
+#
+rhn-profile-sync
+rhn-actions-control --enable-all
+systemctl enable osad
+systemctl restart osad
+systemctl stop osad
+rm -rf /etc/sysconfig/rhn/osad-auth.conf
+rhn_check -vvv
+systemctl start osad
+systemctl status osad
+yum -y install openscap-scanner scap-security-guide spacewalk-oscap
+
+
+netstat -aunltp|grep 5222
+rhncfg-client channels
+
+oscap xccdf eval --profile standard --report ssg-centos7-xccdf.html /usr/share/xml/scap/ssg/content/ssg-centos7-xccdf.xml
+
